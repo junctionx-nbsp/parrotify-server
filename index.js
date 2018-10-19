@@ -1,19 +1,38 @@
-var bodyParser = require('body-parser')
-var express = require('express');
-var app = express();
-
-// parse application/json
-app.use(bodyParser.json())
-
-var consts = require('./constants')
-
-
+var bodyParser = require('body-parser'),
+	express = require('express'),
+	app = express(),
+	port = 80,
+	consts = require('./constants'),
+	request = require('request');
+app.use(bodyParser.json());
 
 app.post('/', function (req, res) {
-	// TODO Interact with Nokia TAS
+	var body = req.body;
+
+	console.log(body);
+
+	var notif = body.callEventNotification;
+
+	request({
+		headers: {
+		  'Content-Type': 'application/json',
 	/*
-
-	res.send(consts.continueA)
-
-	*/
+		},
+		uri: 'https://mn.developer.nokia.com/callback/continueCalled',
+		body: {
+		    "callEventNotification": {
+		        "notificationType": "CallDirection",
+		        "eventDescription": {
+		            "callEvent": "CalledNumber"
+		        },
+		        "callingParticipant": notif.callingParticipant,
+		        "calledParticipant": notif.calledParticipant,
+		        "callSessionIdentifier": notif.callSessionIdentifier,
+		        "timestamp": notif.timestamp
+		    }
+		},
+		method: 'POST'
+	});
 });
+
+app.listen(port, () => console.log(`Example app listening on port ${port}!`))
