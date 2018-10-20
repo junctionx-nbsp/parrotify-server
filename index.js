@@ -7,12 +7,25 @@ var bodyParser = require('body-parser'),
 app.use(bodyParser.json());
 
 app.post('/', function (req, res) {
-	var body = req.body;
+	const body = req.body;
 
-	console.log(body);
+	if (body.hasOwnProperty("callEventNotification")) {
+		console.log("Received a call notification");
+		const notif = body.callEventNotification,
+			type = notif.notificationType;
 
-	var notif = body.callEventNotification;
-
+		if (type === "CallDirection") {
+			res.json({
+				action: {
+					actionToPreform: "Continue",
+					displayAddress: notif.calledParticipant
+				}
+			});
+		}
+	}
+	else {
+		console.log(body);
+	}
 });
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`));

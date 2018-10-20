@@ -57,11 +57,10 @@ class api {
 
 		if (method === "POST") {
 			reqParams.body = JSON.stringify(body);
-			console.debug("Request body is: " + reqParams.body);
 		}
 
 		request(reqParams, function (error, response, responseBody) {
-			console.log('Server responded with:', response.statusCode, responseBody);
+			console.log('Server responded with:', response.statusCode);
 
 			if (error) {
 				console.error('Api call failed', url, error);
