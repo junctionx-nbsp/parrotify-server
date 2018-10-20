@@ -1,17 +1,28 @@
 {
-  "name": "nodetest",
-  "version": "1.0.0",
+  "name": "the-all-hearing-ear",
+  "version": "0.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc --watch || true",
+    "buildOnce": "tsc",
+    "lint": "tslint --format stylish --project .",
+    "prettier": "prettier --config node_modules/tslint-lt/.prettierrc.yml --write \"{,!node_modules/}**/*.{ts,tsx}\"",
+    "test": "npm run buildOnce && npm run lint && npm run prettier && node dist/tests/test.js",
+    "prepublish": "npm run buildOnce"
   },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "express": "^4.16.3",
-    "randomstring": "^1.1.5",
-    "request": "^2.88.0",
-    "ws": "^6.1.0"
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index",
+  "types": "dist/index",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ltetzlaff/the-all-hearing-ear.git"
+  },
+  "author": "ltetzlaff",
+  "license": "All rights reserved.",
+  "devDependencies": {
+    "tslint-lt": "^1.7.3",
+    "typescript": "^3.1.1"
   }
 }
