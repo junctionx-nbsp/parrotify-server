@@ -20,20 +20,20 @@ class api {
 		console.debug("Generated correlationId: " + this.correlationId);
 
 		this.call("/callnotification/v1/subscriptions/callDirection", {
-			"callDirectionSubscription": {
-				"callbackReference": {
-					"notifyURL": config.ngrok_url
+			callDirectionSubscription: {
+				callbackReference: {
+					notifyURL: config.ngrok_url
 				},
-				"filter": {
-					"address": [
+				filter: {
+					address: [
 						config.sip_number
 					],
-					"criteria": [
+					criteria: [
 						"CalledNumber"
 					],
-					"addressDirection": "Called"
+					addressDirection: "Called"
 				},
-				"clientCorrelator": this.correlationId
+				clientCorrelator: this.correlationId
 			}
 		}, "POST");
 	}
@@ -41,7 +41,7 @@ class api {
 	unregister(cb) {
 		console.log("Unregistering hooks for the Nokia API");
 
-		this.call("/callnotification/v1/subscriptions/callDirection/subs?Id=" + this.correlationId + "&addr=" + config.sip_number, null, "DELETE", cb);
+		this.call("/callnotification/v1/subscriptions/callDirection/subs?Id=" + encodeURIComponent(this.correlationId) + "&addr=" + encodeURIComponent(config.sip_number), null, "DELETE", cb);
 	}
 
 	call(url, body, method, cb) {
@@ -51,12 +51,13 @@ class api {
 			  'Content-Type': 'application/json',
 			  "authorization": config.api_key
 			},
-			uri: 'https://mn.developer.nokia.com' + url,
+			uri: 'https://mn.developer.nokia.com/tasseeAPI' + url,
 			method: method
 		};
 
 		if (method === "POST") {
 			reqParams.body = JSON.stringify(body);
+			console.debug("Request body is: " + reqParams.body);
 		}
 
 		request(reqParams, function (error, response, responseBody) {
