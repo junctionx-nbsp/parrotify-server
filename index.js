@@ -3,7 +3,7 @@ var bodyParser = require('body-parser'),
 	app = express(),
 	port = 80,
 	consts = require('./constants'),
-	request = require('request');
+	api = require("./api");
 app.use(bodyParser.json());
 
 app.post('/', function (req, res) {
@@ -13,26 +13,22 @@ app.post('/', function (req, res) {
 
 	var notif = body.callEventNotification;
 
-	request({
-		headers: {
-		  'Content-Type': 'application/json',
-	/*
-		},
-		uri: 'https://mn.developer.nokia.com/callback/continueCalled',
-		body: {
-		    "callEventNotification": {
-		        "notificationType": "CallDirection",
-		        "eventDescription": {
-		            "callEvent": "CalledNumber"
-		        },
-		        "callingParticipant": notif.callingParticipant,
-		        "calledParticipant": notif.calledParticipant,
-		        "callSessionIdentifier": notif.callSessionIdentifier,
-		        "timestamp": notif.timestamp
-		    }
-		},
-		method: 'POST'
-	});
 });
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`))
+app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+
+api.register();
+process.stdin.resume();
+
+function exitHandler(options, exitCode) {
+	console.log("Received SIGTERM. Code is: " + exitCode);
+	api.unregister(function() {
+    	if (options.exit) process.exit();
+	});
+}
+
+process.on('exit', exitHandler.bind(null,{cleanup:true}));
+process.on('SIGINT', exitHandler.bind(null, {exit:true}));
+process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));
+process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
+process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
