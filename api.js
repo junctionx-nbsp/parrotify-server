@@ -44,7 +44,8 @@ class api {
 		this.call("/callnotification/v1/subscriptions/callDirection/subs?Id=" + encodeURIComponent(this.correlationId) + "&addr=" + encodeURIComponent(config.sip_number), null, "DELETE", cb);
 	}
 
-	call(url, body, method, cb) {
+	call(url, body, method, cb, tryCount) {
+		if (!tryCount) tryCount = 1;
 		console.debug("Calling " + url + " with method: " + method);
 		const reqParams = {
 			headers: {
@@ -66,8 +67,14 @@ class api {
 				console.error('Api call failed', url, error);
 			}
 
-			if (cb) {
-				cb(responseBody, error);
+			if (response.statusCode === 504 && tryCount < 3) {
+				console.log("Received proxy error. Re-trying... Count: " + tryCount);
+
+				this.call(url, body, method, cb, tryCount ++);
+			} else {
+				if (cb) {
+					cb(responseBody, error);
+				}
 			}
 		});
 	}
