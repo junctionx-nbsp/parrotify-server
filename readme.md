@@ -1,6 +1,6 @@
-# the-all-hearing-ear
+# Parrotify-server
 
-[![Build Status](https://travis-ci.com/ltetzlaff/the-all-hearing-ear.svg?branch=master)](https://travis-ci.com/ltetzlaff/the-all-hearing-ear)
+[![Build Status](https://travis-ci.com/ltetzlaff/parrotify-server.svg?branch=master)](https://travis-ci.com/ltetzlaff/parrotify-server)
 
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 

@@ -1,5 +1,5 @@
 {
-  "name": "the-all-hearing-ear",
+  "name": "parrotify-server",
   "version": "0.0.0",
   "description": "",
   "scripts": {
@@ -8,7 +8,8 @@
     "lint": "tslint --format stylish --project .",
     "prettier": "prettier --config node_modules/tslint-lt/.prettierrc.yml --write \"{,!node_modules/}**/*.{ts,tsx}\"",
     "test": "npm run buildOnce && npm run lint && npm run prettier && node dist/tests/test.js",
-    "prepublish": "npm run buildOnce"
+    "prepublish": "npm run buildOnce",
+    "start": "node dist/index.js"
   },
   "files": [
     "dist"
@@ -17,7 +18,7 @@
   "types": "dist/index",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ltetzlaff/the-all-hearing-ear.git"
+    "url": "https://github.com/ltetzlaff/parrotify-server.git"
   },
   "author": "ltetzlaff",
   "license": "All rights reserved.",
