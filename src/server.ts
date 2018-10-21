@@ -1,7 +1,7 @@
 import * as bodyParser from "body-parser"
 import * as express from "express"
-import { handleCall } from "./api"
-import { ICallEventNotification, CallAction } from "./types"
+import { handleCall, unsubscribe, subscribe } from "./api"
+import { ICallEventNotification, CallAction, IMediaInterationNotification, ICallEvent } from "./types"
 import { createServer } from "http"
 import { Server as WebSocketServer } from "ws"
 import * as WebSocket from "ws"
@@ -14,6 +14,7 @@ export default class {
   private httpServer: Server
   private webSocketServer: WebSocketServer
   private subscriberSocketsMap = new Map<string, Set<WebSocket>>()
+  private outputFileQueue: string[] = []
 
   constructor(
     private port = 80
@@ -43,15 +44,16 @@ export default class {
       socket.on("message", async data => {
         console.log(`Received Client Data: ${data}`)
 
-        // #TODO convert text into polly mp3
+        // convert text into polly mp3
         const mp3File = await textToMp3(data.toString())
-        console.log(mp3File)
+        console.log(`Converted Text to MP3: ${mp3File}`)
 
-        // #TODO convert mp3 to wav
+        // convert mp3 to wav
         const wavFile = await mp3ToWav(mp3File)
-        console.log(wavFile)
+        console.log(`Converted MP3 to WAV: ${wavFile}`)
 
         // #TODO play wav into chat
+        this.outputFileQueue.push(wavFile)
       })
 
       // Parse QueryString to retrieve impuAddress passed by client (by convention)
@@ -64,38 +66,101 @@ export default class {
         return onError("Error: impuAddress not set properly in queryString")
       }
 
-      // Check if other people are also subscribing to that phone number's events
-      const { subscriberSocketsMap } = this
-      console.log(`Subscribing Client to map: ${subscriberSocketsMap.size} using impuAddress: ${impuAddress}`)
-      const subscriberSockets = subscriberSocketsMap.get(impuAddress)
-      if (subscriberSockets) {
-        subscriberSockets.add(socket)
-      } else {
-        subscriberSocketsMap.set(impuAddress, new Set([socket]))
-      }
-      console.log(`Subscribed Client to map: ${subscriberSocketsMap.size}`)
+      this.subscribeToNokia(impuAddress)
+      this.subscribeClient(impuAddress, socket)
     })
 
     // Configure Routes
-    app.post("/", async (req, res) => {
+    app.post("/callevent", async (req, res) => {
       const body = req.body
-      const callEventNotification = body.callEventNotification as ICallEventNotification
-      const { calledParticipant, callingParticipant } = callEventNotification
-      console.log(`Received Server Callback:\n  Caller: ${callingParticipant}\n  Called: ${calledParticipant}`)
+      console.log(`Received Server Callback:\n  Body: ${JSON.stringify(body)}`)
 
-      // Answer the Nokia API and tell it to continue the call
-      console.log(`  Continuing phone Call..`)
-      res.json(handleCall(calledParticipant, CallAction.Continue))
+      const ce = body.callEventNotification as ICallEventNotification
+      if (ce) this.handleCallEvent(ce, res)
 
-      // Notify our subscribers for that impuAddress of the event
-      const subscriberSockets = this.subscriberSocketsMap.get(calledParticipant)
-      console.log(`  Notifying Subscribers, found: ${subscriberSockets && subscriberSockets.size} for impuAddress: ${calledParticipant}`)
-      if (!subscriberSockets) return
-      for (const subscriberSocket of subscriberSockets) {
-        const message: IWebSocketPackage = { ...callEventNotification.eventDescription }
-        subscriberSocket.send(JSON.stringify(message))
-      }
+      const min = body.mediaInteractionNotification as IMediaInterationNotification
+      if (min) this.handleMediaEvent(min, res)
     })
+  }
+
+  private handleMediaEvent(mediaInteractionNotification: IMediaInterationNotification, res: express.Response) {
+    const { callParticipant, mediaInteractionResult } = mediaInteractionNotification
+
+    if (mediaInteractionResult) console.log(`!!! MEDIA INTERACTION RESULT: ${mediaInteractionResult}`)
+    res.json(handleCall(callParticipant, CallAction.PromptInput, callParticipant, this.outputFileQueue.shift()))
+    // res.json(handleCall(callParticipant, CallAction.Continue))
+
+    this.notifySubscribers(callParticipant, mediaInteractionNotification)
+  }
+
+  private handleCallEvent(callEventNotification: ICallEventNotification, res: express.Response) {
+    const { calledParticipant, callingParticipant, eventDescription } = callEventNotification
+
+    // Answer the Nokia API and tell it to continue the call
+    switch (eventDescription.callEvent) {
+      case ICallEvent.CalledNumber:
+        res.json(handleCall(calledParticipant, CallAction.PromptInput, callingParticipant, this.outputFileQueue.shift()))
+        // res.json(handleCall(calledParticipant, CallAction.Continue))
+        break
+      case ICallEvent.Answer:
+        res.json(handleCall(calledParticipant, CallAction.PromptInput, callingParticipant, this.outputFileQueue.shift()))
+        break
+      default:
+        console.log(`??? Uncaught Event Type: ${eventDescription.callEvent}`)
+        res.json(handleCall(calledParticipant, CallAction.Continue))
+    }
+
+    // This is a hack
+    const calledSubscriber = this.subscriberSocketsMap.get(calledParticipant)
+    if (calledSubscriber !== undefined) {
+      console.log(`CalledSubscriber: ${calledSubscriber.size}`)
+      this.subscriberSocketsMap.set(callingParticipant, calledSubscriber)
+    }
+
+    this.notifySubscribers(callingParticipant, eventDescription)
+    this.notifySubscribers(calledParticipant, eventDescription)
+  }
+
+  private notifySubscribers(calledParticipant: string, data: IWebSocketPackage) {
+    // Notify our subscribers for that impuAddress of the event
+    const subscriberSockets = this.subscriberSocketsMap.get(calledParticipant)
+    console.log(`  Notifying Subscribers, found: ${subscriberSockets && subscriberSockets.size} for impuAddress: ${calledParticipant}`)
+    if (!subscriberSockets) return
+
+    for (const s of subscriberSockets) {
+      s.send(JSON.stringify(data))
+    }
+  }
+
+  // Setup Subscription on Call Events through Nokia API
+  private async subscribeToNokia(displayAddress: string) {
+    try {
+      console.log(await unsubscribe(displayAddress))
+    } catch (e) {
+      console.log(`Unsubscribe failed`)
+      console.log(await subscribe(displayAddress))
+    }
+    console.log(await subscribe(displayAddress))
+  }
+
+  private subscribeClient(displayAddress: string, socket: WebSocket) {
+    const { subscriberSocketsMap } = this
+    console.log(`Subscribing Client to map: ${subscriberSocketsMap.size} using impuAddress: ${displayAddress}`)
+
+    // Check if other people are also subscribing to that phone number's events
+    const subscriberSockets = subscriberSocketsMap.get(displayAddress)
+    if (subscriberSockets) {
+      subscriberSockets.add(socket)
+    } else {
+      subscriberSocketsMap.set(displayAddress, new Set([socket]))
+    }
+
+    // Remove old sockets
+    const removeSocket = () => subscriberSocketsMap.get(displayAddress)!.delete(socket)
+    socket.on("close", (code, reason) => removeSocket())
+    socket.on("error", err => removeSocket())
+
+    console.log(`Subscribed Client to map: ${subscriberSocketsMap.size}`)
   }
 
   public run() {
