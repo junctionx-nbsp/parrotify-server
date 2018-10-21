@@ -9,8 +9,15 @@ export interface ICallEventNotification {
   }
 }
 
+export interface IMediaInterationNotification {
+  notificationType: "PlayAndCollect"
+  callParticipant: string
+  mediaInteractionResult: string
+}
+
 export interface IWebSocketPackage {
-  callEvent: ICallEvent
+  callEvent?: ICallEvent
+  mediaInteractionResult?: string
 }
 
 export const enum ICallEvent {
@@ -18,7 +25,8 @@ export const enum ICallEvent {
   NoAnswer = "NoAnswer",
   Busy = "Busy",
   Disconnected = "Disconnected",
-  NotReachable = "NotReachable"
+  NotReachable = "NotReachable",
+  Answer = "Answer"
 }
 
 export interface ICallActionResponse {
@@ -32,5 +40,6 @@ export const enum CallAction {
   EndCall = "EndCall",
   Continue = "Continue",
   Route = "Route",
-  PlayAudio = "PlayAudio"
+  PlayAudio = "PlayAudio",
+  PromptInput = "PromptInput"
 }
