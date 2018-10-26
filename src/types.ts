@@ -3,7 +3,7 @@ export interface ICallEventNotification {
   calledParticipant: string
   callSessionIdentifier: string
   timestamp: number
-  notificationType: "CallDirection",
+  notificationType: "CallDirection"
   eventDescription: {
     callEvent: ICallEvent
   }

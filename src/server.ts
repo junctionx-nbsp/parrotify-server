@@ -1,7 +1,12 @@
 import * as bodyParser from "body-parser"
 import * as express from "express"
 import { handleCall, unsubscribe, subscribe } from "./api"
-import { ICallEventNotification, CallAction, IMediaInterationNotification, ICallEvent } from "./types"
+import {
+  ICallEventNotification,
+  CallAction,
+  IMediaInterationNotification,
+  ICallEvent
+} from "./types"
 import { createServer } from "http"
 import { Server as WebSocketServer } from "ws"
 import * as WebSocket from "ws"
@@ -11,14 +16,12 @@ import { textToMp3, mp3ToWav } from "./tongue"
 import { IWebSocketPackage } from "./types"
 
 export default class {
-  private httpServer: Server
-  private webSocketServer: WebSocketServer
-  private subscriberSocketsMap = new Map<string, Set<WebSocket>>()
-  private outputFileQueue: string[] = []
+  private readonly httpServer: Server
+  private readonly webSocketServer: WebSocketServer
+  private readonly subscriberSocketsMap = new Map<string, Set<WebSocket>>()
+  private readonly outputFileQueue: string[] = []
 
-  constructor(
-    private port = 80
-  ) {
+  constructor(private readonly port = 80) {
     // Configure Express App
     const app = express()
     app.use(bodyParser.json())
@@ -30,7 +33,9 @@ export default class {
 
     // Attach WS Event Handlers
     this.webSocketServer.on("connection", (socket, req) => {
-      console.log(`Established WebSocket Channel with: ${req.connection.remoteAddress}`)
+      console.log(
+        `Established WebSocket Channel with: ${req.connection.remoteAddress}`
+      )
 
       const onError = (...args: {}[]) => {
         console.log(...["## Socket", ...args])
@@ -83,27 +88,62 @@ export default class {
     })
   }
 
-  private handleMediaEvent(mediaInteractionNotification: IMediaInterationNotification, res: express.Response) {
-    const { callParticipant, mediaInteractionResult } = mediaInteractionNotification
+  private handleMediaEvent(
+    mediaInteractionNotification: IMediaInterationNotification,
+    res: express.Response
+  ) {
+    const {
+      callParticipant,
+      mediaInteractionResult
+    } = mediaInteractionNotification
 
-    if (mediaInteractionResult) console.log(`!!! MEDIA INTERACTION RESULT: ${mediaInteractionResult}`)
-    res.json(handleCall(callParticipant, CallAction.PromptInput, callParticipant, this.outputFileQueue.shift()))
+    if (mediaInteractionResult)
+      console.log(`!!! MEDIA INTERACTION RESULT: ${mediaInteractionResult}`)
+    res.json(
+      handleCall(
+        callParticipant,
+        CallAction.PromptInput,
+        callParticipant,
+        this.outputFileQueue.shift()
+      )
+    )
     // res.json(handleCall(callParticipant, CallAction.Continue))
 
     this.notifySubscribers(callParticipant, mediaInteractionNotification)
   }
 
-  private handleCallEvent(callEventNotification: ICallEventNotification, res: express.Response) {
-    const { calledParticipant, callingParticipant, eventDescription } = callEventNotification
+  private handleCallEvent(
+    callEventNotification: ICallEventNotification,
+    res: express.Response
+  ) {
+    const {
+      calledParticipant,
+      callingParticipant,
+      eventDescription
+    } = callEventNotification
 
     // Answer the Nokia API and tell it to continue the call
     switch (eventDescription.callEvent) {
       case ICallEvent.CalledNumber:
-        res.json(handleCall(calledParticipant, CallAction.PromptInput, callingParticipant, this.outputFileQueue.shift()))
+        res.json(
+          handleCall(
+            calledParticipant,
+            CallAction.PromptInput,
+            callingParticipant,
+            this.outputFileQueue.shift()
+          )
+        )
         // res.json(handleCall(calledParticipant, CallAction.Continue))
         break
       case ICallEvent.Answer:
-        res.json(handleCall(calledParticipant, CallAction.PromptInput, callingParticipant, this.outputFileQueue.shift()))
+        res.json(
+          handleCall(
+            calledParticipant,
+            CallAction.PromptInput,
+            callingParticipant,
+            this.outputFileQueue.shift()
+          )
+        )
         break
       default:
         console.log(`??? Uncaught Event Type: ${eventDescription.callEvent}`)
@@ -121,10 +161,16 @@ export default class {
     this.notifySubscribers(calledParticipant, eventDescription)
   }
 
-  private notifySubscribers(calledParticipant: string, data: IWebSocketPackage) {
+  private notifySubscribers(
+    calledParticipant: string,
+    data: IWebSocketPackage
+  ) {
     // Notify our subscribers for that impuAddress of the event
     const subscriberSockets = this.subscriberSocketsMap.get(calledParticipant)
-    console.log(`  Notifying Subscribers, found: ${subscriberSockets && subscriberSockets.size} for impuAddress: ${calledParticipant}`)
+    console.log(
+      `  Notifying Subscribers, found: ${subscriberSockets &&
+        subscriberSockets.size} for impuAddress: ${calledParticipant}`
+    )
     if (!subscriberSockets) return
 
     for (const s of subscriberSockets) {
@@ -145,7 +191,11 @@ export default class {
 
   private subscribeClient(displayAddress: string, socket: WebSocket) {
     const { subscriberSocketsMap } = this
-    console.log(`Subscribing Client to map: ${subscriberSocketsMap.size} using impuAddress: ${displayAddress}`)
+    console.log(
+      `Subscribing Client to map: ${
+        subscriberSocketsMap.size
+      } using impuAddress: ${displayAddress}`
+    )
 
     // Check if other people are also subscribing to that phone number's events
     const subscriberSockets = subscriberSocketsMap.get(displayAddress)
@@ -156,7 +206,8 @@ export default class {
     }
 
     // Remove old sockets
-    const removeSocket = () => subscriberSocketsMap.get(displayAddress)!.delete(socket)
+    const removeSocket = () =>
+      subscriberSocketsMap.get(displayAddress)!.delete(socket)
     socket.on("close", (code, reason) => removeSocket())
     socket.on("error", err => removeSocket())
 

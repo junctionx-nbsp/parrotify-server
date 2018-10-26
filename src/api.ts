@@ -1,11 +1,21 @@
 import { CallAction } from "./types"
-import { SUBSCRIPTION_ID, NOKIA_BASE_URL, NOKIA_API_KEY, FALLBACK_AUDIO_URL } from "./utils/envs"
+import {
+  SUBSCRIPTION_ID,
+  NOKIA_BASE_URL,
+  NOKIA_API_KEY,
+  FALLBACK_AUDIO_URL
+} from "./utils/envs"
 import { post, del } from "improved/dist/ajax"
 
 let lastKnownAudioFile = FALLBACK_AUDIO_URL
 
 export async function unsubscribe(displayAddress: string) {
-  return del(`${NOKIA_BASE_URL}/subscriptions/callDirection/subs?Id=${encodeURIComponent(SUBSCRIPTION_ID)}&addr=${encodeURIComponent(displayAddress)}`, { authorization: NOKIA_API_KEY })
+  return del(
+    `${NOKIA_BASE_URL}/subscriptions/callDirection/subs?Id=${encodeURIComponent(
+      SUBSCRIPTION_ID
+    )}&addr=${encodeURIComponent(displayAddress)}`,
+    { authorization: NOKIA_API_KEY }
+  )
 }
 
 export async function subscribe(displayAddress: string) {
@@ -15,28 +25,55 @@ export async function subscribe(displayAddress: string) {
         notifyURL: `${process.env.PUBLIC_IP}/callevent`
       },
       filter: {
-        address: [
-          displayAddress
-        ],
+        address: [displayAddress],
         criteria: [
           "CalledNumber",
           // "Busy",
           // "Disconnected"
-          "Answer",
+          "Answer"
         ],
         addressDirection: "Called"
       },
       clientCorrelator: SUBSCRIPTION_ID
     }
   }
-  return post(`${NOKIA_BASE_URL}/subscriptions/callDirection/subs?Id=${encodeURIComponent(SUBSCRIPTION_ID)}&addr=${encodeURIComponent(displayAddress)}`, body, false, { authorization: NOKIA_API_KEY })
+  return post(
+    `${NOKIA_BASE_URL}/subscriptions/callDirection/subs?Id=${encodeURIComponent(
+      SUBSCRIPTION_ID
+    )}&addr=${encodeURIComponent(displayAddress)}`,
+    body,
+    false,
+    { authorization: NOKIA_API_KEY }
+  )
 }
 
-export function handleCall(displayAddress: string, actionToPerform: CallAction.PromptInput, secondAddress: string, audioFileUrl?: string): {}
-export function handleCall(displayAddress: string, actionToPerform: CallAction.Continue | CallAction.EndCall): {}
-export function handleCall(displayAddress: string, actionToPerform: CallAction.PlayAudio, secondAddress: undefined, audioFileUrl: string): {}
-export function handleCall(displayAddress: string, actionToPerform: CallAction.Route, secondAddress: string): {}
-export function handleCall(displayAddress: string, actionToPerform: CallAction, secondAddress?: string, audioFileUrl?: string): {} {
+export function handleCall(
+  displayAddress: string,
+  actionToPerform: CallAction.PromptInput,
+  secondAddress: string,
+  audioFileUrl?: string
+): {}
+export function handleCall(
+  displayAddress: string,
+  actionToPerform: CallAction.Continue | CallAction.EndCall
+): {}
+export function handleCall(
+  displayAddress: string,
+  actionToPerform: CallAction.PlayAudio,
+  secondAddress: undefined,
+  audioFileUrl: string
+): {}
+export function handleCall(
+  displayAddress: string,
+  actionToPerform: CallAction.Route,
+  secondAddress: string
+): {}
+export function handleCall(
+  displayAddress: string,
+  actionToPerform: CallAction,
+  secondAddress?: string,
+  audioFileUrl?: string
+): {} {
   if (audioFileUrl) lastKnownAudioFile = audioFileUrl
   switch (actionToPerform) {
     case CallAction.Continue:
@@ -64,9 +101,7 @@ export function handleCall(displayAddress: string, actionToPerform: CallAction, 
             playingConfiguration: {
               playFileLocation: audioFileUrl || lastKnownAudioFile
             },
-            callParticipant: [
-              displayAddress
-            ]
+            callParticipant: [displayAddress]
           }
         }
       }
@@ -84,9 +119,7 @@ export function handleCall(displayAddress: string, actionToPerform: CallAction, 
             playingConfiguration: {
               playFileLocation: audioFileUrl || lastKnownAudioFile
             },
-            callParticipant: [
-              secondAddress
-            ]
+            callParticipant: [secondAddress]
           },
           playAndCollectInteractionSubscription: {
             callbackReference: {
