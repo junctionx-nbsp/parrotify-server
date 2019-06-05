@@ -29,7 +29,7 @@
     "@types/public-ip": "^2.3.0",
     "@types/ws": "^6.0.1",
     "dotenv": "^6.1.0",
-    "tslint-lt": "^1.7.3",
+    "tslint-lt": "^1.9.0",
     "typescript": "^3.1.1"
   },
   "dependencies": {
